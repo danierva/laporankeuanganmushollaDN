@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Keuangan Masjid</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1, h2 { text-align: center; color: #1b5e20; }
+        
+        .form-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        .form-group input, .form-group select, .form-group button {
+            padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px;
+        }
+        .form-group input, .form-group select { flex: 1; min-width: 150px; }
+        .btn-submit { background-color: #2e7d32; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .btn-submit:hover { background-color: #1b5e20; }
+        .btn-cancel { background-color: #757575; color: white; border: none; cursor: pointer; display: none; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #2e7d32; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+
+        .btn-edit { background-color: #ffa000; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        .btn-delete { background-color: #d32f2f; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        
+        .total-box { margin-top: 20px; padding: 15px; background-color: #e8f5e9; border-left: 5px solid #2e7d32; font-size: 16px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Laporan Keuangan Masjid</h1>
+    <h2>Rekapitulasi Infaq Bulanan</h2>
+
+    <!-- Form Input Data -->
+    <form id="financeForm">
+        <input type="hidden" id="editIndex" value="-1">
+        <div class="form-group">
+            <input type="date" id="tanggal" required>
+            <select id="kategori" required>
+                <option value="">-- Pilih Kategori Infaq --</option>
+                <option value="Infaq Kotak Amal">Infaq Kotak Amal</option>
+                <option value="Infaq Anak Yatim">Infaq Anak Yatim</option>
+                <option value="Infaq Donatur">Infaq Donatur</option>
+            </select>
+            <input type="text" id="keterangan" placeholder="Keterangan (misal: Jumat Minggu 1)" required>
+            <input type="number" id="jumlah" placeholder="Jumlah (Rp)" required min="0">
+            <button type="submit" id="btnSave" class="btn-submit">Tambah Data</button>
+            <button type="button" id="btnCancel" class="btn-cancel" onclick="resetForm()">Batal</button>
+        </div>
+    </form>
+
+    <!-- Tabel Data -->
+    <table>
+        <thead>
+            <tr>
+                <th>No</th>
+                <th>Tanggal</th>
+                <th>Kategori</th>
+                <th>Keterangan</th>
+                <th>Jumlah (Rp)</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="dataTable">
+            <!-- Data dimasukkan secara dinamis melalui JavaScript -->
+        </tbody>
+    </table>
+
+    <div class="total-box">
+        Total Saldo Terkumpul: <span id="totalNominal">Rp 0</span>
+    </div>
+</div>
+
+<script>
+    let financeData = JSON.parse(localStorage.getItem('masjidFinanceData')) || [];
+
+    function renderData() {
+        const tableBody = document.getElementById('dataTable');
+        tableBody.innerHTML = '';
+        let total = 0;
+
+        financeData.forEach((item, index) => {
+            total += parseFloat(item.jumlah);
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${item.tanggal}</td>
+                <td><strong>${item.kategori}</strong></td>
+                <td>${item.keterangan}</td>
+                <td>Rp ${parseInt(item.jumlah).toLocaleString('id-ID')}</td>
+                <td>
+                    <button class="btn-edit" onclick="editData(${index})">Edit</button>
+                    <button class="btn-delete" onclick="deleteData(${index})">Hapus</button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        document.getElementById('totalNominal').innerText = 'Rp ' + total.toLocaleString('id-ID');
+        localStorage.setItem('masjidFinanceData', JSON.stringify(financeData));
+    }
+
+    document.getElementById('financeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const tanggal = document.getElementById('tanggal').value;
+        const kategori = document.getElementById('kategori').value;
+        const keterangan = document.getElementById('keterangan').value;
+        const jumlah = document.getElementById('jumlah').value;
+        const editIndex = document.getElementById('editIndex').value;
+
+        if (editIndex === "-1") {
+            // Tambah Data Baru
+            financeData.push({ tanggal, kategori, keterangan, jumlah });
+        } else {
+            // Update Data
+            financeData[editIndex] = { tanggal, kategori, keterangan, jumlah };
+        }
+
+        resetForm();
+        renderData();
+    });
+
+    function editData(index) {
+        const item = financeData[index];
+        document.getElementById('tanggal').value = item.tanggal;
+        document.getElementById('kategori').value = item.kategori;
+        document.getElementById('keterangan').value = item.keterangan;
+        document.getElementById('jumlah').value = item.jumlah;
+        document.getElementById('editIndex').value = index;
+
+        document.getElementById('btnSave').innerText = 'Update Data';
+        document.getElementById('btnCancel').style.display = 'inline-block';
+    }
+
+    function deleteData(index) {
+        if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+            financeData.splice(index, 1);
+            renderData();
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('financeForm').reset();
+        document.getElementById('editIndex').value = "-1";
+        document.getElementById('btnSave').innerText = 'Tambah Data';
+        document.getElementById('btnCancel').style.display = 'none';
+    }
+
+    // Tampilkan data saat pertama kali dimuat
+    renderData();
+</script>
+
+</body>
+</html>
